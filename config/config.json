@@ -23,6 +23,5 @@
             "complexity": 1.2
         }
     },
-    "active_preset": "money",
-    "simulation_days": 3
+    "active_preset": "money"
 }

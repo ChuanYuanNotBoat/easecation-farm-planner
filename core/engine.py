@@ -130,23 +130,40 @@ class FarmEngine:
         preset_name = self.config["active_preset"]
         weights = self.config["objective_presets"][preset_name]
 
+        # 获取时间窗口（小时）
+        online_duration = state.get("online_duration", 6)    # 默认6小时
+        sleep_duration = state.get("sleep_duration", 8)      # 默认8小时
+        total_time = online_duration + sleep_duration
+
         sim_state = copy.deepcopy(state)
         land_total = self.config["land_units"]
         remaining_land = land_total
 
-        # 计算所有作物的评分并排序（高→低）
+        # 过滤作物：必须在可操作时间或睡眠时间内能收获
+        viable_crops = []
+        for crop in self.crops:
+            gt = crop["growth_time"]
+            # 只要能在任一时间段内收获即可
+            if gt <= online_duration or gt <= sleep_duration:
+                viable_crops.append(crop)
+            # 否则舍弃（无法在任一阶段内收获）
+
+        # 计算所有可行作物的评分并排序（高→低）
         scored_crops = sorted(
-            self.crops,
+            viable_crops,
             key=lambda c: self._score(c, weights),
             reverse=True
         )
 
-        # 计算库存作物的当前评分（仅考虑已解锁作物）
+        # 计算库存作物的当前评分（仅考虑可行且库存>0的作物）
         inventory_scores = []
         for crop_name in sim_state["inventory_crops"]:
             if crop_name in self.crop_dict and sim_state["inventory_crops"][crop_name] > 0:
-                score = self._score(self.crop_dict[crop_name], weights)
-                inventory_scores.append((crop_name, score))
+                crop = self.crop_dict[crop_name]
+                # 检查库存作物是否在当前可行列表中（即能否收获）
+                if crop in viable_crops:
+                    score = self._score(crop, weights)
+                    inventory_scores.append((crop_name, score))
         inventory_scores.sort(key=lambda x: x[1])  # 升序，低分优先卖
         sell_priority = [name for name, _ in inventory_scores]
 
@@ -177,21 +194,32 @@ class FarmEngine:
                 remaining_land -= plant_qty
                 purchases.append({"crop": name, "seeds": plant_qty})
 
-        if remaining_land > 0:
-            allocation["idle"] = remaining_land
+        # 记录第一轮实际种植地块数（用于计算闲置）
+        first_round_planted = sum(allocation.values())
 
-        # ----- 新增：收获预测统计 -----
+        # ----- 收获预测：考虑时间窗口内可种植的轮次 -----
         harvest = {}
         harvest_value_full = {}
         harvest_exp = {}
+        harvest_rounds = {}   # 记录每种作物在总时间内的可种植轮数
+
         for crop_name, plant_qty in allocation.items():
-            if crop_name == 'idle':
-                continue
             crop = self.crop_dict[crop_name]
-            qty = plant_qty * crop["expected_yield"]
-            harvest[crop_name] = qty
-            harvest_value_full[crop_name] = qty * crop["sell_price"]
-            exp = qty * (crop.get("exp_per_unit") or 0)
+            gt = crop["growth_time"]
+            # 计算轮次
+            rounds = 0
+            if gt <= online_duration:
+                rounds += online_duration // gt
+            if gt <= sleep_duration:
+                rounds += 1   # 睡眠期间只能种一轮
+            # 如果两个条件都满足，则总轮数为 online_duration//gt + 1
+            harvest_rounds[crop_name] = rounds
+
+            per_plot_yield = crop["expected_yield"]
+            total_yield = plant_qty * per_plot_yield * rounds
+            harvest[crop_name] = total_yield
+            harvest_value_full[crop_name] = total_yield * crop["sell_price"]
+            exp = total_yield * (crop.get("exp_per_unit") or 0)
             harvest_exp[crop_name] = exp
 
         # 计算全部卖出新收获（考虑当前剩余额度和折扣）的总收入
@@ -200,6 +228,21 @@ class FarmEngine:
             sim_state["sell_limit_remaining"],
             sim_state["reduced_sell_multiplier"]
         )
+
+        # ----- 新增统计：种子总成本、闲置土地、浪费时间 -----
+        total_seed_cost = 0
+        total_occupied_hours = 0
+        for crop_name, plant_qty in allocation.items():
+            crop = self.crop_dict[crop_name]
+            rounds = harvest_rounds.get(crop_name, 0)
+            seed_cost_per_round = plant_qty * crop["seed_cost"]
+            total_seed_cost += seed_cost_per_round * rounds
+            total_occupied_hours += plant_qty * crop["growth_time"] * rounds
+
+        idle_land = land_total - first_round_planted
+        wasted_time_hours = land_total * total_time - total_occupied_hours
+        if wasted_time_hours < 0:
+            wasted_time_hours = 0  # 防止计算误差
         # ----- 结束新增 -----
 
         return {
@@ -210,9 +253,12 @@ class FarmEngine:
             "final_cash": sim_state["cash"],
             "remaining_inventory": sim_state["inventory_crops"],
             "sell_limit_remaining": sim_state["sell_limit_remaining"],
-            # 新增字段
             "harvest": harvest,
             "harvest_value_full": harvest_value_full,
             "harvest_value_after_limit": harvest_value_after_limit,
             "harvest_exp": harvest_exp,
+            "harvest_rounds": harvest_rounds,
+            "total_seed_cost": total_seed_cost,
+            "idle_land": idle_land,
+            "wasted_time_hours": wasted_time_hours,
         }

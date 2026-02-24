@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>农场策略引擎 · 简洁面板</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f5f7fa; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 1200px; width: 100%; background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); padding: 24px; }
+        h1 { font-size: 1.8rem; margin-top: 0; margin-bottom: 20px; font-weight: 500; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; }
+        h2 { font-size: 1.4rem; font-weight: 500; color: #334155; margin: 24px 0 12px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .card { background: #f8fafc; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; }
+        .card h3 { font-size: 1.2rem; margin-top: 0; margin-bottom: 16px; font-weight: 500; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+        .kv-list { display: flex; flex-direction: column; gap: 8px; }
+        .kv-item { display: flex; align-items: center; }
+        .kv-key { width: 130px; color: #475569; }
+        .kv-value { font-weight: 500; color: #0f172a; }
+        button { background: #3b82f6; border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #2563eb; }
+        button.secondary { background: #e2e8f0; color: #1e293b; }
+        button.secondary:hover { background: #cbd5e1; }
+        input, select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; width: 100%; }
+        .flex { display: flex; gap: 8px; align-items: center; }
+        .mt-4 { margin-top: 16px; }
+        .mb-2 { margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { text-align: left; background: #f1f5f9; padding: 10px 8px; font-weight: 500; color: #334155; }
+        td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+        .badge { background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 20px; font-size: 0.8rem; }
+        .result-box { background: #f1f5f9; border-radius: 12px; padding: 16px; margin-top: 24px; }
+        .mono { font-family: monospace; }
+        .warning { color: #b45309; background: #fffbeb; padding: 8px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🌾 农场策略引擎 · 简洁面板</h1>
+
+    <div class="grid-2">
+        <!-- 当前配置 -->
+        <div class="card">
+            <h3>⚙️ 当前配置</h3>
+            <div id="config-display" class="kv-list">加载中...</div>
+            <div class="mt-4">
+                <h4 style="margin:0 0 8px 0; font-size:1rem;">修改配置</h4>
+                <div class="flex">
+                    <select id="config-key" style="flex:2;" onchange="updateConfigPlaceholder()">
+                        <option value="land_units" data-current="">土地数量</option>
+                        <option value="current_level" data-current="">当前等级</option>
+                        <option value="active_preset" data-current="">活动预设</option>
+                    </select>
+                    <!-- 普通输入框（默认显示） -->
+                    <input type="text" id="config-value" placeholder="新值" style="flex:1;" value="">
+                    <!-- 预设下拉框（默认隐藏） -->
+                    <select id="config-preset-select" style="display:none; flex:1;" onchange="document.getElementById('config-value').value = this.value">
+                        <option value="money">money</option>
+                        <option value="exp">exp</option>
+                        <option value="balanced">balanced</option>
+                        <option value="lazy_mode">lazy_mode</option>
+                    </select>
+                    <button onclick="updateConfig()">更新</button>
+                </div>
+                <p class="warning" style="margin-top:8px; font-size:0.85rem;">※ 预设权重不可直接修改，请编辑 config.json</p>
+            </div>
+        </div>
+
+        <!-- 当前状态 -->
+        <div class="card">
+            <h3>📦 当前状态</h3>
+            <div id="state-display" class="kv-list">加载中...</div>
+            <div class="mt-4">
+                <h4 style="margin:0 0 8px 0; font-size:1rem;">修改状态</h4>
+                <div class="flex">
+                    <select id="state-key" style="flex:2;" onchange="updateStatePlaceholder()">
+                        <option value="cash" data-current="">现金</option>
+                        <option value="sell_limit_remaining" data-current="">剩余原价额度</option>
+                        <option value="reduced_sell_multiplier" data-current="">折扣系数</option>
+                        <option value="online_duration" data-current="">可操作时间</option>
+                        <option value="sleep_duration" data-current="">非操作时间</option>
+                        <option value="inventory.wheat" data-current="">小麦库存</option>
+                        <option value="inventory.lettuce" data-current="">生菜库存</option>
+                        <option value="inventory.carrot" data-current="">胡萝卜库存</option>
+                        <option value="inventory.turnip" data-current="">芜菁库存</option>
+                        <option value="inventory.potato" data-current="">土豆库存</option>
+                        <option value="inventory.beetroot" data-current="">甜菜根库存</option>
+                        <option value="inventory.radish" data-current="">萝卜库存</option>
+                        <option value="inventory.sweet_potato" data-current="">红薯库存</option>
+                        <option value="inventory.nether_wart" data-current="">下界疣库存</option>
+                    </select>
+                    <input type="text" id="state-value" placeholder="新值" style="flex:1;" value="">
+                    <button onclick="updateState()">更新</button>
+                </div>
+                <p class="warning" style="margin-top:8px; font-size:0.85rem;">※ 库存用 inventory.作物名 修改</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 作物列表（仅显示已解锁） -->
+    <h2>🌱 已解锁作物</h2>
+    <div id="crops-table">加载中...</div>
+
+    <!-- 分析按钮与结果 -->
+    <div style="margin: 24px 0 12px;">
+        <button onclick="runAnalysis()" style="padding:12px 24px; font-size:1rem;">🔍 运行分析</button>
+    </div>
+    <div id="result-box" class="result-box" style="display:none;">
+        <h3 style="margin-top:0;">📊 分析结果</h3>
+        <div id="result-content"></div>
+    </div>
+</div>
+
+<script>
+    // ---------- 工具函数 ----------
+    function formatNumber(n) {
+        if (n === undefined) return '';
+        if (Number.isInteger(n)) return n;
+        return n.toFixed ? n.toFixed(2) : n;
+    }
+
+    // ---------- 加载数据 ----------
+    async function loadConfig() {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        let html = '';
+        for (let [k, v] of Object.entries(data)) {
+            if (k === 'objective_presets') {
+                html += `<div class="kv-item"><span class="kv-key">${k}:</span> <span class="kv-value">(预设对象)</span></div>`;
+            } else {
+                html += `<div class="kv-item"><span class="kv-key">${k}:</span> <span class="kv-value">${JSON.stringify(v)}</span></div>`;
+            }
+        }
+        document.getElementById('config-display').innerHTML = html;
+
+        // 更新下拉框的 data-current 和输入框占位符
+        const select = document.getElementById('config-key');
+        for (let opt of select.options) {
+            let key = opt.value;
+            if (data.hasOwnProperty(key)) {
+                opt.dataset.current = data[key];
+            }
+        }
+        updateConfigPlaceholder();
+    }
+
+    async function loadState() {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        let html = '';
+        html += `<div class="kv-item"><span class="kv-key">现金:</span> <span class="kv-value">${data.cash} FC</span></div>`;
+        html += `<div class="kv-item"><span class="kv-key">剩余原价额度:</span> <span class="kv-value">${data.sell_limit_remaining}</span></div>`;
+        html += `<div class="kv-item"><span class="kv-key">折扣系数:</span> <span class="kv-value">${data.reduced_sell_multiplier}</span></div>`;
+        html += `<div class="kv-item"><span class="kv-key">可操作时间:</span> <span class="kv-value">${data.online_duration} 小时</span></div>`;
+        html += `<div class="kv-item"><span class="kv-key">非操作时间:</span> <span class="kv-value">${data.sleep_duration} 小时</span></div>`;
+        html += `<div style="margin-top:8px;"><strong>库存作物:</strong> `;
+        if (Object.keys(data.inventory_crops).length === 0) html += '无';
+        else {
+            html += '<ul style="margin:4px 0 0 16px;">';
+            for (let [c, q] of Object.entries(data.inventory_crops)) {
+                html += `<li>${c}: ${q}</li>`;
+            }
+            html += '</ul>';
+        }
+        html += `</div>`;
+        document.getElementById('state-display').innerHTML = html;
+
+        // 更新状态下拉框的 data-current
+        const select = document.getElementById('state-key');
+        for (let opt of select.options) {
+            let key = opt.value;
+            if (key.startsWith('inventory.')) {
+                let crop = key.split('.')[1];
+                if (data.inventory_crops.hasOwnProperty(crop)) {
+                    opt.dataset.current = data.inventory_crops[crop];
+                } else {
+                    opt.dataset.current = '0';
+                }
+            } else if (data.hasOwnProperty(key)) {
+                opt.dataset.current = data[key];
+            }
+        }
+        updateStatePlaceholder();
+    }
+
+    async function loadCrops() {
+        const configRes = await fetch('/api/config');
+        const config = await configRes.json();
+        const currentLevel = config.current_level || 0;
+        const cropsRes = await fetch('/api/crops');
+        const crops = await cropsRes.json();
+        let table = '<table><tr><th>名称</th><th>生长(h)</th><th>产量</th><th>售价</th><th>种子价</th><th>利润/块</th><th>利润/h</th><th>解锁等级</th></tr>';
+        crops.forEach(c => {
+            if (c.unlock_level > currentLevel) return;
+            const profitPlot = c.expected_yield * c.sell_price - c.seed_cost;
+            const profitHour = profitPlot / c.growth_time;
+            table += `<tr>
+                <td>${c.name}</td>
+                <td>${c.growth_time}</td>
+                <td>${c.expected_yield}</td>
+                <td>${c.sell_price}</td>
+                <td>${c.seed_cost}</td>
+                <td>${profitPlot.toFixed(1)}</td>
+                <td>${profitHour.toFixed(2)}</td>
+                <td>${c.unlock_level}</td>
+            </tr>`;
+        });
+        table += '</table>';
+        document.getElementById('crops-table').innerHTML = table;
+    }
+
+    // ---------- 占位符更新 ----------
+    function updateConfigPlaceholder() {
+        const select = document.getElementById('config-key');
+        const selected = select.options[select.selectedIndex];
+        const key = select.value;
+        const current = selected.dataset.current || '';
+        const input = document.getElementById('config-value');
+        const presetSelect = document.getElementById('config-preset-select');
+
+        if (key === 'active_preset') {
+            // 显示预设下拉框，隐藏普通输入框
+            input.style.display = 'none';
+            presetSelect.style.display = 'block';
+            presetSelect.value = current;  // 设置当前预设为选中项
+        } else {
+            input.style.display = 'block';
+            presetSelect.style.display = 'none';
+            input.placeholder = `当前: ${current}`;
+            input.value = current;  // 自动填入当前值
+        }
+    }
+
+    function updateStatePlaceholder() {
+        const select = document.getElementById('state-key');
+        const selected = select.options[select.selectedIndex];
+        const current = selected.dataset.current || '';
+        const input = document.getElementById('state-value');
+        input.placeholder = `当前: ${current}`;
+        input.value = current;
+    }
+
+    // ---------- 更新操作 ----------
+    async function updateConfig() {
+        const key = document.getElementById('config-key').value;
+        let value;
+        if (key === 'active_preset') {
+            value = document.getElementById('config-preset-select').value;
+        } else {
+            value = document.getElementById('config-value').value;
+        }
+        if (!value.trim()) return;
+        const res = await fetch('/api/set_config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({key, value})
+        });
+        if (res.ok) {
+            alert('配置已更新');
+            loadConfig();
+            loadCrops(); // 等级变化可能影响作物列表
+        } else {
+            const err = await res.json();
+            alert('错误：' + (err.detail || '未知错误'));
+        }
+    }
+
+    async function updateState() {
+        const key = document.getElementById('state-key').value;
+        const value = document.getElementById('state-value').value;
+        if (!value.trim()) return;
+        const res = await fetch('/api/set_state', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({key, value})
+        });
+        if (res.ok) {
+            alert('状态已更新');
+            loadState();
+        } else {
+            const err = await res.json();
+            alert('错误：' + (err.detail || '未知错误'));
+        }
+    }
+
+    // ---------- 运行分析 ----------
+    async function runAnalysis() {
+        // 获取当前状态
+        const stateRes = await fetch('/api/state');
+        const state = await stateRes.json();
+        const analyzeRes = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(state)
+        });
+        const result = await analyzeRes.json();
+
+        let html = `<p><strong>预设：</strong> ${result.preset}</p>`;
+
+        // 种植分配
+        html += '<h4>🌱 种植分配</h4><ul>';
+        for (let [crop, qty] of Object.entries(result.allocation)) {
+            html += `<li>${crop}: ${qty} 块</li>`;
+        }
+        html += '</ul>';
+
+        // 销售建议
+        if (result.sales && result.sales.length) {
+            html += '<h4>💰 建议卖出</h4><ul>';
+            result.sales.forEach(s => html += `<li>${s.crop}: ${s.qty}</li>`);
+            html += '</ul>';
+        } else {
+            html += '<p>无需卖出库存</p>';
+        }
+
+        // 购买种子
+        if (result.purchases && result.purchases.length) {
+            html += '<h4>🌰 需购买种子</h4><ul>';
+            result.purchases.forEach(p => html += `<li>${p.crop}: ${p.seeds}</li>`);
+            html += '</ul>';
+        }
+
+        // 收获预测（新字段）
+        if (result.harvest && Object.keys(result.harvest).length) {
+            html += '<h4>📈 收获明细</h4>';
+            html += '<table><tr><th>作物</th><th>种植块数</th><th>轮次</th><th>单批净收益(FC)</th><th>总净收益(FC)</th><th>收获量</th></tr>';
+            for (let crop in result.harvest) {
+                let qty = result.harvest[crop];
+                let val = result.harvest_value_full[crop];
+                let rounds = result.harvest_rounds[crop];
+                let plantQty = result.allocation[crop] || 0;
+                // 单批净收益 = (收获价值 - 种子成本) / (块数 * 轮次)  这里简化，用原价收入，种子成本单独展示
+                let perBatchRevenue = plantQty > 0 ? val / (plantQty * rounds) : 0;
+                html += `<tr>
+                    <td>${crop}</td>
+                    <td>${plantQty}</td>
+                    <td>${rounds}</td>
+                    <td>${perBatchRevenue.toFixed(1)}</td>
+                    <td>${val.toFixed(1)}</td>
+                    <td>${qty.toFixed(1)}</td>
+                </tr>`;
+            }
+            html += '</table>';
+            html += `<p>全部卖出总收入（考虑软上限）: <strong>${result.harvest_value_after_limit.toFixed(1)} FC</strong></p>`;
+            html += `<p>总种子成本: ${result.total_seed_cost.toFixed(1)} FC</p>`;
+            html += `<p>总净收益: ${(result.harvest_value_after_limit - result.total_seed_cost).toFixed(1)} FC</p>`;
+            html += `<p>闲置土地: ${result.idle_land} 块</p>`;
+            html += `<p>浪费时间: ${result.wasted_time_hours.toFixed(1)} 小时</p>`;
+        }
+
+        // 最终状态
+        html += '<h4>🏁 最终状态</h4>';
+        html += `<p>现金: ${result.final_cash} FC<br>`;
+        html += `剩余原价额度: ${result.sell_limit_remaining}<br>`;
+        html += `剩余库存: <pre class="mono">${JSON.stringify(result.remaining_inventory, null, 2)}</pre></p>`;
+
+        document.getElementById('result-content').innerHTML = html;
+        document.getElementById('result-box').style.display = 'block';
+    }
+
+    // 初始化
+    loadConfig();
+    loadState();
+    loadCrops();
+</script>
+</body>
+</html>

@@ -125,7 +125,6 @@ class FarmCLI(cmd.Cmd):
     - land_units : 土地数量
     - current_level : 当前等级
     - active_preset : 当前使用的预设名称
-    - simulation_days : 模拟天数（预留）
   注意：objective_presets 为复杂对象，不可直接修改，请编辑 config.json 文件调整内部权重。
 
   可用状态键:
@@ -340,7 +339,6 @@ class FarmCLI(cmd.Cmd):
             "current_level": "当前等级",
             "objective_presets": "策略预设（包含利润/经验/复杂度权重）- 不可直接修改，请编辑 config.json",
             "active_preset": "当前使用的预设名称",
-            "simulation_days": "模拟天数（预留）"
         }
         for key in self.config.keys():
             desc = key_descriptions.get(key, "无说明")
@@ -370,6 +368,12 @@ class FarmCLI(cmd.Cmd):
         if key == "objective_presets":
             self.out.error("objective_presets 是复杂对象，无法直接修改。请编辑 config.json 文件调整内部权重。")
             return
+
+        # 对 active_preset 进行合法性校验
+        if key == "active_preset":
+            if value not in self.config["objective_presets"]:
+                self.out.error(f"预设 '{value}' 不存在，可选: {', '.join(self.config['objective_presets'].keys())}")
+                return
 
         try:
             if '.' in value:
@@ -455,18 +459,32 @@ class FarmCLI(cmd.Cmd):
             pur_table = [[p['crop'], p['seeds']] for p in result['purchases']]
             print(tabulate(pur_table, headers=["作物", "种子数"], tablefmt="plain"))
 
-        # ----- 新增：收获预测统计 -----
+        # ----- 增强的收获预测 -----
         if result['harvest']:
-            self.out.info("\n收获预测（基于本次种植）:", color=Fore.CYAN)
+            self.out.info("\n收获明细:", color=Fore.CYAN)
             harvest_table = []
+            total_seed_cost = result['total_seed_cost']
             for crop, qty in result['harvest'].items():
+                plant_qty = result['allocation'].get(crop, 0)
+                rounds = result['harvest_rounds'][crop]
                 value = result['harvest_value_full'][crop]
                 exp = result['harvest_exp'][crop]
-                harvest_table.append([crop, f"{qty:.1f}", f"{value:.1f} FC", f"{exp:.1f}"])
+                # 单批次净收益（每块地每轮原价收入）
+                per_batch = value / (plant_qty * rounds) if plant_qty > 0 and rounds > 0 else 0
+                harvest_table.append([
+                    crop, plant_qty, rounds,
+                    f"{per_batch:.1f}",
+                    f"{value:.1f}",
+                    f"{exp:.1f}"
+                ])
             print(tabulate(harvest_table,
-                          headers=["作物", "收获量", "原价总价值", "经验"],
+                          headers=["作物", "块数", "轮次", "单批收益(FC)", "总收益(FC)", "经验"],
                           tablefmt="grid"))
             self.out.info(f"全部卖出总收入（考虑软上限）: {result['harvest_value_after_limit']:.1f} FC")
+            self.out.info(f"总种子成本: {total_seed_cost:.1f} FC")
+            self.out.info(f"总净收益: {result['harvest_value_after_limit'] - total_seed_cost:.1f} FC")
+            self.out.info(f"闲置土地: {result.get('idle_land', 0)} 块")
+            self.out.info(f"浪费时间: {result.get('wasted_time_hours', 0):.1f} 小时")
         # ----- 结束新增 -----
 
         # 最终状态
