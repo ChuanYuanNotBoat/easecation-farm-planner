@@ -1,0 +1,21 @@
+{
+    "cash": 7629,
+    "sell_limit_remaining": 0,
+    "reduced_sell_multiplier": 0.4,
+    "inventory_crops": {
+        "wheat": 4730,
+        "lettuce": 0,
+        "carrot": 0,
+        "turnip": 0,
+        "potato": 0,
+        "beetroot": 0,
+        "radish": 0,
+        "sweet_potato": 0,
+        "nether_wart": 0
+    },
+    "inventory_items": {
+        "fertilizer": 8
+    },
+    "online_duration": 2,
+    "sleep_duration": 0
+}

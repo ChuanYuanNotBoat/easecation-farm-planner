@@ -1,0 +1,28 @@
+{
+    "land_units": 82,
+    "current_level": 13,
+    "objective_presets": {
+        "money": {
+            "profit": 1.0,
+            "exp": 0.0,
+            "complexity": 0.1
+        },
+        "exp": {
+            "profit": 0.5,
+            "exp": 1.0,
+            "complexity": 0.1
+        },
+        "balanced": {
+            "profit": 1.0,
+            "exp": 0.6,
+            "complexity": 0.3
+        },
+        "lazy_mode": {
+            "profit": 0.8,
+            "exp": 0.3,
+            "complexity": 1.2
+        }
+    },
+    "active_preset": "money",
+    "simulation_days": 3
+}

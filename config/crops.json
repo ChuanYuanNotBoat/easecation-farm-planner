@@ -1,0 +1,83 @@
+[
+    {
+        "name": "wheat",
+        "growth_time": 1.0,
+        "expected_yield": 3.0,
+        "sell_price": 4,
+        "seed_cost": 2,
+        "exp_per_unit": 5,
+        "unlock_level": 1
+    },
+    {
+        "name": "lettuce",
+        "growth_time": 2.0,
+        "expected_yield": 4.0,
+        "sell_price": 7,
+        "seed_cost": 6,
+        "exp_per_unit": null,
+        "unlock_level": 2
+    },
+    {
+        "name": "carrot",
+        "growth_time": 3.0,
+        "expected_yield": 3.0,
+        "sell_price": 10,
+        "seed_cost": 6,
+        "exp_per_unit": null,
+        "unlock_level": 3
+    },
+    {
+        "name": "turnip",
+        "growth_time": 3.0,
+        "expected_yield": 3.0,
+        "sell_price": 11,
+        "seed_cost": 7,
+        "exp_per_unit": null,
+        "unlock_level": 3
+    },
+    {
+        "name": "potato",
+        "growth_time": 3.0,
+        "expected_yield": 3.5,
+        "sell_price": 10,
+        "seed_cost": 7,
+        "exp_per_unit": null,
+        "unlock_level": 4
+    },
+    {
+        "name": "beetroot",
+        "growth_time": 4.0,
+        "expected_yield": 2.5,
+        "sell_price": 13,
+        "seed_cost": 8,
+        "exp_per_unit": null,
+        "unlock_level": 4
+    },
+    {
+        "name": "radish",
+        "growth_time": 4.0,
+        "expected_yield": 3.5,
+        "sell_price": 12,
+        "seed_cost": 10,
+        "exp_per_unit": null,
+        "unlock_level": 5
+    },
+    {
+        "name": "sweet_potato",
+        "growth_time": 8.0,
+        "expected_yield": 3.0,
+        "sell_price": 18,
+        "seed_cost": 18,
+        "exp_per_unit": null,
+        "unlock_level": 6
+    },
+    {
+        "name": "nether_wart",
+        "growth_time": 8.0,
+        "expected_yield": 3.0,
+        "sell_price": 18,
+        "seed_cost": 22,
+        "exp_per_unit": null,
+        "unlock_level": 7
+    }
+]
